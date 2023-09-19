@@ -1,104 +1,59 @@
-import React, { Component } from 'react';
-import shortid from 'shortid';
-import css from './App.module.css';
+import { useState, useEffect } from 'react';
+
+import { ContactForm } from './ContactForm/ContactForm';
 import ContactList from './ContactList/ContactList';
-import ContactForm from './ContactForm';
-import Filter from './Filter';
+import { Filter } from './Filter/Filter';
+import { nanoid } from 'nanoid';
+import './App.module.css';
 
-class App extends Component {
-  state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
-  };
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts');
-    const parsedContacts = JSON.parse(contacts);
+export const App = () => {
+  const [contacts, setContacts] = useState(
+    JSON.parse(localStorage.getItem('contacts')) ?? []
+  );
+  const [filter, setFilter] = useState('');
 
-    if (parsedContacts) {
-      this.setState({ contacts: parsedContacts });
-    }
-  }
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
 
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.contacts !== prevState.contact) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-    }
-    if (this.state.contacts === 0) {
-      localStorage.removeItem('contacts');
-    }
-  }
-
-  addContact = ({ name, number }) => {
-    if (
-      this.state.contacts.find(
-        contact => contact.name.toLowerCase() === name.toLowerCase()
-      )
-    ) {
-      alert(`${name} is already in contacts`);
-      return;
-    }
+  const formSubmit = (name, number) => {
     const contact = {
-      id: shortid.generate(),
-      name: name,
-      number: number,
+      id: nanoid(),
+      name,
+      number,
     };
-    this.setState(prevState => ({
-      contacts: [...prevState.contacts, contact],
-    }));
+
+    const enterContact = contacts.find(contact =>
+      contact.name.toLowerCase().includes(name.toLowerCase())
+    );
+
+    enterContact
+      ? alert(`${name} is already in contact`)
+      : setContacts([contact, ...contacts]);
   };
 
-  changeFilter = e => {
-    this.setState({ filter: e.currentTarget.value });
+  const changeFilterInput = e => {
+    setFilter(e.target.value);
   };
 
-  getVisibleContacts = () => {
-    const { filter, contacts } = this.state;
-    const normalizedFilter = filter.toLowerCase();
-
+  const findContacts = () => {
     return contacts.filter(contact =>
-      contact.name.toLowerCase().includes(normalizedFilter)
+      contact.name.toLowerCase().includes(filter.toLowerCase())
     );
   };
 
-  deleteContact = todoId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== todoId),
-    }));
+  const deleteContact = id => {
+    setContacts(contacts.filter(contact => contact.id !== id));
+    setFilter('');
   };
 
-  render() {
-    const { contacts, filter } = this.state;
-    const visibleContacts = this.getVisibleContacts();
-
-    return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'column',
-          fontSize: 15,
-          color: '#010101',
-        }}
-      >
-        <h1>Phonebook</h1>
-        <ContactForm onSubmit={this.addContact} />
-
-        <h2 className={css.titleContacts}>Contacts</h2>
-        <div className={css.allContacts}>All contacts: {contacts.length}</div>
-        <Filter value={filter} onChange={this.changeFilter} />
-        <ContactList
-          contacts={visibleContacts}
-          onDeleteContact={this.deleteContact}
-        />
-      </div>
-    );
-  }
-}
-
-export default App;
+  return (
+    <section>
+      <h1>Phonebook</h1>
+      <ContactForm onSubmit={formSubmit} />
+      <h2>Contacts</h2>
+      <Filter filter={filter} changeFilterInput={changeFilterInput} />
+      <ContactList contacts={findContacts()} deleteContact={deleteContact} />
+    </section>
+  );
+};
